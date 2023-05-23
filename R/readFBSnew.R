@@ -37,8 +37,8 @@ hr1[is.na(hr1)] <- 0
 LEMmapping <- read.csv(system.file("extdata",mapping="newConsLEMmapping.csv",
                      package = "MarkupsChen"))
 
-kmapping <- toolGetMapping("newFAOitems_online_DRAFT.csv", type = "sectoral")
-
+kmapping <- read.csv(system.file("extdata",mapping="newFAOitems_online_DRAFT.csv",
+                     package = "MarkupsChen"))
 
 kpr <- c(findset("kpr"), "Vegetables")
 ksd <- findset("ksd")

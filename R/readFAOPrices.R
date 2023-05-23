@@ -11,7 +11,9 @@
 
 readFAOPrices <- function(fillPrices = T, level = "k") {
 
-FAOmap <- toolGetMapping("FAOitems_online.csv", type = "sectoral")
+FAOmap <-  read.csv(system.file("extdata",mapping="FAOitems_online.csv",
+                            package = "MarkupsChen"))
+
 
 prpr <- readSource("FAO_online", "PricesProducerAnnual",
                    convert = TRUE)
@@ -38,7 +40,8 @@ prpr_fbs <- toolAggregate(prpr, rel = FAOmap1, weight = weight,
                           dim = 3.1, wdim = 3.1 )
 
 #map to magpie
-kmapping <- toolGetMapping("newFAOitems_online_DRAFT.csv", type = "sectoral")
+kmapping <- read.csv(system.file("extdata",mapping="newFAOitems_online_DRAFT.csv",
+                     package = "MarkupsChen"))
 
 #consumption weight from FoodBalanceItem to Large Exp Grouping, but some values dropped, oilpalm gets dropped
 hr <- calcOutput("FAOharmonized", aggregate = FALSE)

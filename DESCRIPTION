@@ -23,5 +23,6 @@ Depends:
     GDPuc,
     magpie4,
     ggrepel,
-    readxl
+    readxl, 
+    brms
 
