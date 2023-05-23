@@ -1,0 +1,27 @@
+Package: MarkupsChen
+Type: Package
+Title: What the Package Does (Title Case)
+Version: 0.1.0
+Author: David M Chen
+Maintainer: David M Chen <david.chen@pik-potsdam.de>
+Description: Scripts for calculating consumer price markups, and running 
+   regression analysis
+License: LGPL-3 | file LICENSE
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.2
+Depends:
+    R(>= 2.10.0),
+    magclass(>= 3.17),
+    madrat (>= 2.20.9),
+    mrcommons(>= 1.4.0),
+    mrdrivers (>= 1.0.0),
+    tidyverse,
+    magpiesets,
+    mrland,
+    readxlsb,
+    GDPuc,
+    magpie4,
+    ggrepel,
+    readxl
+

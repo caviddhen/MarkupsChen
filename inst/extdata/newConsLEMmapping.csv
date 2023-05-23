@@ -1,0 +1,81 @@
+FBS,LEM
+2511|Wheat and products,Bread and cereals
+2807|Rice and products,Bread and cereals
+2513|Barley and products,Bread and cereals
+2514|Maize and products,Bread and cereals
+2515|Rye and products,Bread and cereals
+2516|Oats,Bread and cereals
+2517|Millet and products,Bread and cereals
+2518|Sorghum and products,Bread and cereals
+"2520|Cereals, Other",Bread and cereals
+2532|Cassava and products,Vegetables
+2531|Potatoes and products,Vegetables
+2533|Sweet potatoes,Vegetables
+2536|Sugar cane,Fruit
+2536|Sugar cane_processed,"Sugar, jam, honey, chocolate and confectionery"
+2537|Sugar beet_processed,"Sugar, jam, honey, chocolate and confectionery"
+"2543|Sweeteners, Other_processed","Sugar, jam, honey, chocolate and confectionery"
+2745|Honey,"Sugar, jam, honey, chocolate and confectionery"
+2546|Beans,Vegetables
+2547|Peas,Vegetables
+"2549|Pulses, Other and products",Vegetables
+2551|Nuts and products,Vegetables
+2555|Soyabeans,Vegetables
+2555|Soyabeans_processed,Oils and fats
+2552|Groundnuts,Vegetables
+2552|Groundnuts_processed,Oils and fats
+2557|Sunflower seed,Vegetables
+2557|Sunflower seed_processed,Oils and fats
+2558|Rape and Mustardseed,Vegetables
+2558|Rape and Mustardseed_processed,Oils and fats
+2560|Coconuts - Incl Copra,Vegetables
+2560|Coconuts - Incl Copra_processed,Oils and fats
+2561|Sesame seed,Vegetables
+2561|Sesame seed_processed,Oils and fats
+2562|Palm kernels,Vegetables
+2563|Palm kernels,Oils and fats
+2563|Olives (including preserved),Vegetables
+2563|Olives (including preserved)_processed,Oils and fats
+"2570|Oilcrops, Other",Vegetables
+"2570|Oilcrops, Other",Oils and fats
+2601|Tomatoes and products,Vegetables
+2602|Onions,Vegetables
+"2605|Vegetables, other",Vegetables
+"2611|Oranges, Mandarines",Fruit
+"2612|Lemons, Limes and products",Fruit
+2613|Grapefruit and products,Fruit
+"2614|Citrus, Other",Fruit
+2615|Bananas,Fruit
+2616|Plantains,Fruit
+2617|Apples and products,Fruit
+2618|Pineapples and products,Fruit
+2619|Dates,Fruit
+2620|Grapes and products (excl wine),Fruit
+"2625|Fruits, other",Fruit
+2633|Cocoa Beans and products,"Sugar, jam, honey, chocolate and confectionery"
+2640|Pepper,Vegetables
+2641|Pimento,Vegetables
+2731|Bovine Meat,Meat
+2732|Mutton & Goat Meat,Meat
+2733|Pigmeat,Meat
+2734|Poultry Meat,Meat
+"2735|Meat, Other",Meat
+"2736|Offals, Edible",Meat
+"2737|Fats, Animals, Raw",Meat
+2744|Eggs,"Milk, cheese and eggs"
+2848|Milk - Excluding Butter,"Milk, cheese and eggs"
+2848|Milk - Excluding Butter_processed,"Milk, cheese and eggs"
+2761|Freshwater Fish,Meat
+"2534|Roots, Other",Vegetables
+"2781|Fish, Body Oil",Meat
+"2782|Fish, Liver Oil",Meat
+2762|Demersal Fish,Meat
+2763|Pelagic Fish,Meat
+"2764|Marine Fish, Other",Meat
+2765|Crustaceans,Meat
+2766|Cephalopods,Meat
+"2767|Molluscs, Other",Meat
+"2769|Aquatic Animals, Others",Meat
+2775|Aquatic Plants,Vegetables
+2535|Yams,Vegetables
+"2768|Meat, Aquatic Mammals",Meat
