@@ -5,12 +5,13 @@ Fruit,others
 Bread and cereals,tece
 Bread and cereals,maiz
 Bread and cereals,trce
-Bread and cereals,rice_pro
+Rice,rice_pro
 Bread and cereals,brans
-Meat,livst_rum
-Meat,livst_pig
-Meat,livst_chick
-Meat,fish
+Beef and veal,livst_rum
+"Lamb, mutton and goat",livst_mutton
+Pork,livst_pig
+Poultry,livst_chick
+Fish and seafood,fish
 Processed,oils
 Processed,oilpalm
 Processed,sugar

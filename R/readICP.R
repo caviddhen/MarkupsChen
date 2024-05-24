@@ -9,13 +9,12 @@
 
 readICP <- function() {
 
-  exp <- readSource("ICP2017raw", convert = FALSE)
-
-
+  exp <- read_xlsb(system.file("extdata",mapping="ICP-Researcher-Data_Global_2017_Chen_0810-2022.xlsb",
+                               package = "mrmarkup"), sheet = "EXP", skip = 3)
 
   #mapping of k to BH aggregate category to even broader cat
   kBHmap <- read.csv(system.file("extdata",mapping="MappingKBH.csv",
-               package = "MarkupsChen"))
+               package = "mrmarkup"))
 
   colnames(exp)[1:5] <- exp[1, c(1:5)]
   colnames(exp)[6] <- "ClassificationCode"
@@ -31,33 +30,37 @@ readICP <- function() {
   exp <- inner_join(exp, exchanges) %>%
     mutate(expPPP = (LCU/pppEX)/1e9, expMER = (LCU/merEX)/1e9) #in billions
 
-  expProdAgg <- filter(exp, ClassificationCode == "e_Class",
-                       !str_detect(BHName, "Spirits|Wine|Beer|Tobacco|Narcotics|Coffee|cheese and eggs")) %>%
+exp[is.na(exp)] <- 0
+
+
+  expProdAgg <- filter(exp, str_detect(BHName, "Rice|Other cereals|Bread$|Other bakery|Pasta|Beef and veal|Pork|Lamb|Poultry|Other meats|Fish and seafood|milk|Cheese|Eggs|Oils|Fruit|Vegetables|Sugar, jam|Catering services \\(Class\\)|Food products n\\.e\\.c\\. \\(Class\\)")) %>%
     group_by(BHName, iso3c) %>%
     select(iso3c, BHName, expPPP, expMER) %>%
     mutate(year = 2017) %>%
     select(iso3c, BHName, expMER, year) #only MER for now
 
-  #split milk and eggs for better matching with FAO where countries only report one or the other
+  kBHagg <- read.csv(system.file("extdata",mapping="MappingBHAgg.csv",
+               package = "mrmarkup"))
 
-  expMilk <- filter(exp, BHName %in% c("Fresh milk","Preserved milk and other milk products",
-                                       "Cheese and curd")) %>%
-    group_by(iso3c) %>%
-    summarise(expMER = sum(expMER, na.rm=T)) %>%
-    mutate(year = 2017, BHName = "Milk products")
+#group to my grouping
+expProdAgg <- expProdAgg  %>% 
+              inner_join(kBHagg)  %>% 
+              group_by(iso3c, year, Bhagg)  %>% 
+              summarise(expMER = sum(expMER))  %>% 
+              rename(BHName = Bhagg)
 
+## redistribute meat preps
+meatPrep <- filter(expProdAgg, BHName %in% c("Beef and veal", "Lamb, mutton and goat", "Pork", "Poultry",
+                                             "Other meats and meat preparations"))  %>% 
+            toolRedist(redist = "Other meats and meat preparations")
 
-  expEggs <- filter(exp, BHName =="Eggs and egg-based products" ) %>%
-    group_by(iso3c) %>%
-    summarise(expMER = sum(expMER, na.rm=T)) %>%
-    mutate(year = 2017, BHName = "Eggs")
+expProdAgg <- filter(expProdAgg, !BHName %in% c("Beef and veal", "Lamb, mutton and goat", "Pork", "Poultry",
+                                             "Other meats and meat preparations")) 
+expProdAgg <- rbind(expProdAgg, meatPrep)
 
-  expProdAgg <- rbind(expProdAgg, expMilk, expEggs)
-
-  ############# ADD 2011 values, downloaded from ICP website###################
+ 
+  ############# ADD 2011 values###################
   ################################
-
-  #assum same ratios of hotel to catering and split of milk cheese eggs for 2011 as in 2017
 
   ### get ratio of resto to hotel
   hrat <- filter(exp, BHName %in% c("RESTAURANTS AND HOTELS", "CATERING SERVICES")) %>%
@@ -65,14 +68,26 @@ readICP <- function() {
     pivot_wider(names_from = BHName, values_from = expMER) %>%
     mutate(hrat = `CATERING SERVICES`/`RESTAURANTS AND HOTELS`)
 
-  eggrat <- filter(exp, BHName %in% c("Milk, cheese and eggs", "Eggs and egg-based products")) %>%
+  meatrat <- filter(expProdAgg, BHName %in% c("Beef and veal", "Lamb, mutton and goat", "Pork", "Poultry")) %>%
+    select(year, BHName, iso3c, expMER) %>%
+    pivot_wider(names_from = BHName, values_from = expMER) %>%
+        mutate(Meat = `Beef and veal` + `Lamb, mutton and goat`  +   Pork + Poultry)  %>% 
+          mutate_at(vars(-c(iso3c, Meat, year)), funs(. / Meat))
+
+eggrat <- filter(exp, BHName %in% c("Milk, cheese and eggs", "Eggs and egg-based products")) %>%
     select(BHName, iso3c, expMER) %>%
     pivot_wider(names_from = BHName, values_from = expMER) %>%
     mutate(eggrat  = `Eggs and egg-based products`/`Milk, cheese and eggs`)
 
+breadrat <- filter(exp, BHName %in% c("Bread and cereals", "Rice")) %>%
+    select(BHName, iso3c, expMER) %>%
+    pivot_wider(names_from = BHName, values_from = expMER) %>%
+    mutate(breadrat  = Rice/`Bread and cereals`)
+
+
 
   exp2 <- read.csv(system.file("extdata",mapping="c4391ee3-4ebc-4ab0-a94b-bd47c059040e_Data.csv",
-                        package = "MarkupsChen"))
+                        package = "mrmarkup"))
 
   exp21 <- exp2 %>%
     filter(!is.na(Series.Code)) %>%
@@ -102,9 +117,25 @@ readICP <- function() {
     pivot_longer(cols = c("Eggs", "Milk products"), names_to = "BHName", values_to = "expMER") %>%
     filter(!is.na(expMER))
 
-  exp21 <- rbind(exp21, cater ) %>%
+meats <- filter(exp21, BHName == "Meat")  %>% 
+            inner_join(select(meatrat, -Meat))  %>% 
+            mutate_at(vars(-c(iso3c, BHName, year, expMER)), funs(expMER * .))  %>% 
+            select(iso3c, 5:last_col())  %>% 
+              pivot_longer(cols = c(2:last_col()), names_to = "BHName", values_to = "expMER")  %>% 
+              filter(!is.na(expMER))
+breads <- filter(exp21, BHName == "Bread and cereals")  %>% 
+            inner_join(select(breadrat, -c(`Bread and cereals`, "Rice")))  %>% 
+            mutate(Rice = expMER * breadrat, 
+                   "Bread and cereals" = expMER * (1-breadrat))  %>% 
+            select(iso3c, "Bread and cereals", "Rice")  %>% 
+              pivot_longer(cols = c( "Bread and cereals", "Rice"), names_to = "BHName", values_to = "expMER")  %>% 
+              filter(!is.na(expMER))
+
+  exp21 <- filter(exp21, !BHName %in% c("RESTAURANTS AND HOTELS", "Milk, cheese and eggs", "Meat", "Bread and cereals")) %>%
+           rbind(cater ) %>%
            rbind(eggMilk) %>%
-    filter(!BHName %in% c("RESTAURANTS AND HOTELS", "Milk, cheese and eggs")) %>%
+           rbind(meats)  %>% 
+           rbind(breads)  %>% 
     mutate(year = 2011)
 
  #currency converts
@@ -130,7 +161,7 @@ readICP <- function() {
 expProdAgg <- inner_join(expProdAggNEC, expProdAggCatering)
 
 ###merge sugars and fats into processed##
-  expProdAggf <- filter(expProdAgg, BHName %in% c("Sugar, jam, honey, chocolate and confectionery",
+  expProdAggf <- filter(expProdAgg, BHName %in% c("Sugar, jam, honey, chocolate and confectionery", 
                                                    "Oils and fats",
                                                    "Mineral waters, soft drinks, fruit and vegetable juices (Class)")) %>%
     group_by(iso3c, year) %>%
@@ -138,7 +169,7 @@ expProdAgg <- inner_join(expProdAggNEC, expProdAggCatering)
     mutate(BHName = "Processed")
 
   expProdAgg <- rbind(expProdAgg, expProdAggf) %>%
-    filter(!BHName %in% c( "Sugar, jam, honey, chocolate and confectionery", "Oils and fats",
+    filter(!BHName %in% c( "Sugar, jam, honey, chocolate and confectionery", "Oils and fats", 
                             "Mineral waters, soft drinks, fruit and vegetable juices (Class)"))
 
 #####remove where no reporting

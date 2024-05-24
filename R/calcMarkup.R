@@ -9,7 +9,7 @@
 #' @author David M Chen
 
 calcMarkup <- function(plot = FALSE) {
-
+#load("C:/PIK/ICPdata/expLECconConv_newProc_caterSplit.Rds") #already currecny converted
   expProdAgg <- readICP() #ICP expenditures
   expLEC <- calcFAOExpenditures() #FAO expenditures
 
@@ -32,6 +32,7 @@ consW <- readFBSnew(level = "LEM")
 ### split expenditures AH and AFH ###
 
 pop <- calcOutput("Population", aggregate = F)[,,"pop_SSP2"]
+#load("C:/PIK/pop.Rda")
 pop <- time_interpolate(pop[,,"pop_SSP2"], interpolated_year <- c(2010:2020), integrate_interpolated_years = TRUE)
 pop <- magclass::as.data.frame(collapseNames(pop), rev = 2) %>%
   rename("pop" = .value) %>%
@@ -79,6 +80,19 @@ FAOmarkup3 <- inner_join(FAOmarkup2,rm_20th) %>%
            case_when(ExpPerKG > rm ~ FAOmarkupwCater_perT )) %>%
   filter(!is.na(FAOmarkupNoCater_perT),!is.na(FAOmarkupwCater_perT))
 
+#   t <- FAOmarkup3  %>% select(iso3c, year,gdp,  BHName, FAOmarkupNoCater_perT,FAOmarkupwCater_perT, pop)  %>% 
+# pivot_longer(cols = c(FAOmarkupNoCater_perT,FAOmarkupwCater_perT ), names_to = "Cater", values_to = "Value" ) 
+
+# out <- ggplot(t, aes(x = gdp, y = Value)) +
+#    geom_point( aes(x = gdp, y = Value)) +
+#    facet_grid(Cater~BHName) +
+#    geom_point(aes(size = pop))+
+#    ylim(0,10) +
+#   theme_bw(base_size = 22) 
+
+# ggsave(out, height =  12, width =36,
+#  file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/moneyMetrix.pdf")
+
 if(plot){
 ggplot(FAOmarkup3, aes(x=log(gdp, base=10), y = FAOmarkupNoCater_perT)) +
   geom_point(aes(size = pop))+
@@ -96,6 +110,7 @@ ggplot(FAOmarkup3, aes(x= log(gdp, base=10), y = FAOmarkupwCater_perT)) +
  }
 return(FAOmarkup3)
 
+#save(FAOmarkuppT, file = "C:/PIK/ICPdata/FAOmarkup_perTon_DBU_update.Rds")
 }
 
 
