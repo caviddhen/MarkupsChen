@@ -17,8 +17,7 @@
 #' @return dataframe or magclass object of consumer food expenditures
 #' @author David M Chen
 
-FoodExpMagpieMarkup <- function(gdx, level = "reg", type = "consumer", prodAggr = FALSE, afterShock = FALSE,
-                                povmodel = FALSE, validYi = FALSE) {
+FoodExpMagpieMarkup <- function(gdx, level = "reg", type = "consumer", prodAggr = FALSE, afterShock = FALSE,povmodel = FALSE, validYi = FALSE) {
 #gdx <-  "/p/projects/magpie/users/davidch/magpie_versions/marketingMargins/magpie/output/Margins_SSP2-POL_2024-04-23_12.52.33/fulldata.gdx"
 
 # NOTE THIS ONE IS IN 2005 USDMER
@@ -135,10 +134,10 @@ prpr <- prpr %>%
 ##### get markup regression coefs #####
 #coefs <- regressMarkups()
 prprOG <- prpr
-load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev1OutConsTighterHigherFilterpop1outliPopWSplit11NY.Rda")
+load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev1OutConsTighterHigherFilterpop1outliPopWSplit21Y7Fin.Rda")
 
 
-brmMarkupProdBF <- brmRev1OutConsTighterHigherFilterpop1outliPopWSplit11NY
+brmMarkupProdBF <- brmRev1OutConsTighterHigherFilterpop1outliPopWSplit21Y7
 
 #remove alcohol and fish
 prpr <- filter(prpr, k != "alcohol")
@@ -164,65 +163,103 @@ attr <- as.data.frame(attr, rev = 2)  %>%
       rename( "k" = "products", "wm" = ".value") %>%
       select(k, wm)
 
-
+prpr <- prpr %>% rename("Ayear" = "year")  %>% 
+               mutate(year = 2017)
 #split to get only markups 
+gdppc <- gdppc %>% rename("Ayear" = "year")  
+#split to get only markups 
+
+
 prpr1 <- prpr  %>% mutate(Cater = "Cater")   %>% 
                  inner_join(gdppc)  %>% 
-                 filter(year <2016)  %>% 
+                 filter(Ayear <2010)  %>% 
                  mutate(lngdp = log(gdppc), 
                          loggdp = log(gdppc, base = 10))  %>% 
-     select(iso3c, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+     select(iso3c, Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
       distinct()
 fit1 <- fitted(brmMarkupProdBF, prpr1)
 prpr1 <- cbind(prpr1, fit1)
 
+rm(fit1)
 gc()
 
-prpr2 <- prpr  %>% mutate(Cater = "Cater")   %>% 
+
+prpr11 <- prpr  %>% mutate(Cater = "Cater")   %>% 
                  inner_join(gdppc)  %>% 
-                 filter(year >2016)  %>% 
-                 filter(year < 2049)  %>% 
+                  filter(Ayear >2010)  %>%
+                  filter(Ayear < 2029)  %>%  
                  mutate(lngdp = log(gdppc), 
                          loggdp = log(gdppc, base = 10))  %>% 
-     select(iso3c, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+     select(iso3c, Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
       distinct()
-fit2 <- fitted(brmMarkupProdBF, prpr2)
-prpr2 <- cbind(prpr2, fit2)
-
+fit11 <- fitted(brmMarkupProdBF, prpr11)
+prpr11 <- cbind(prpr11, fit11)
+rm(fit11)
 gc()
 
 prpr3 <- prpr  %>% mutate(Cater = "Cater")   %>% 
                  inner_join(gdppc)  %>% 
-                 filter(year >2049)  %>% 
+                 filter(Ayear >2029)  %>% 
+                 filter(Ayear < 2049)  %>% 
                  mutate(lngdp = log(gdppc), 
                          loggdp = log(gdppc, base = 10))  %>% 
-     select(iso3c, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+     select(iso3c, Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
       distinct()
 fit3 <- fitted(brmMarkupProdBF, prpr3)
 prpr3 <- cbind(prpr3, fit3)
-
+rm(fit3)
 gc()
+
+
+prpr31 <- prpr  %>% mutate(Cater = "Cater")   %>% 
+                 inner_join(gdppc)  %>% 
+                 filter(Ayear >2049)  %>% 
+                    filter(Ayear < 2074)  %>% 
+
+                 mutate(lngdp = log(gdppc), 
+                         loggdp = log(gdppc, base = 10))  %>% 
+     select(iso3c, Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+      distinct()
+fit31 <- fitted(brmMarkupProdBF, prpr31)
+prpr31 <- cbind(prpr31, fit31)
+rm(fit31)
+gc()
+
+prpr32 <- prpr  %>% mutate(Cater = "Cater")   %>% 
+                 inner_join(gdppc)  %>% 
+                    filter(Ayear > 2074)  %>% 
+
+                 mutate(lngdp = log(gdppc), 
+                         loggdp = log(gdppc, base = 10))  %>% 
+     select(iso3c, Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+      distinct()
+fit32 <- fitted(brmMarkupProdBF, prpr32)
+prpr32 <- cbind(prpr32, fit32)
+rm(fit32)
+gc()
+
 
 
 prpr4 <- prpr  %>% mutate(Cater = "noCater")   %>% 
                  inner_join(gdppc)  %>% 
-                  filter(year <2016)  %>% 
+                  filter(Ayear <2010)  %>% 
                  mutate(lngdp = log(gdppc), 
                          loggdp = log(gdppc, base = 10))  %>% 
-     select(iso3c, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+     select(iso3c, Ayear,year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
       distinct()
 fit4 <- fitted(brmMarkupProdBF, prpr4)  
 prpr4 <- cbind(prpr4, fit4) 
-
+rm(fit4)
 gc()
+
 
 prpr5 <- prpr  %>% mutate(Cater = "noCater")   %>% 
                  inner_join(gdppc)  %>% 
-                  filter(year >2016)  %>%
-                  filter(year < 2049)  %>%  
+                  filter(Ayear >2010)  %>%
+                  filter(Ayear < 2029)  %>%  
                  mutate(lngdp = log(gdppc), 
                          loggdp = log(gdppc, base = 10))  %>% 
-     select(iso3c, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+     select(iso3c,Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
       distinct()
 fit5 <- fitted(brmMarkupProdBF, prpr5)  
 prpr5 <- cbind(prpr5, fit5) 
@@ -231,16 +268,56 @@ gc()
 
 prpr6 <- prpr  %>% mutate(Cater = "noCater")   %>% 
                  inner_join(gdppc)  %>% 
-                  filter(year > 2049)  %>%  
+                  filter(Ayear > 2029)  %>%  
+                filter(Ayear < 2049)  %>% 
                  mutate(lngdp = log(gdppc), 
                          loggdp = log(gdppc, base = 10))  %>% 
-     select(iso3c, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+     select(iso3c,Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
       distinct()
 fit6 <- fitted(brmMarkupProdBF, prpr6)  
 prpr6 <- cbind(prpr6, fit6) 
+rm(fit6)
 gc()
 
-prpr_fits <- rbind(prpr1, prpr2, prpr3, prpr4, prpr5, prpr6)
+
+prpr7 <- prpr  %>% mutate(Cater = "noCater")   %>% 
+                 inner_join(gdppc)  %>% 
+                  filter(Ayear > 2049)  %>%  
+                filter(Ayear < 2074)  %>% 
+                 mutate(lngdp = log(gdppc), 
+                         loggdp = log(gdppc, base = 10))  %>% 
+     select(iso3c,Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+      distinct()
+fit7 <- fitted(brmMarkupProdBF, prpr7)  
+prpr7 <- cbind(prpr7, fit7) 
+rm(fit7)
+gc()
+
+prpr8 <- prpr  %>% mutate(Cater = "noCater")   %>% 
+                 inner_join(gdppc)  %>% 
+                filter(Ayear > 2074)  %>% 
+                 mutate(lngdp = log(gdppc), 
+                         loggdp = log(gdppc, base = 10))  %>% 
+     select(iso3c,Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+      distinct()
+fit8 <- fitted(brmMarkupProdBF, prpr8)  
+prpr8 <- cbind(prpr8, fit8) 
+rm(fit8)
+gc()
+
+
+
+
+
+prpr_fits <- rbind(prpr1, prpr11, prpr3, prpr31, prpr32,  prpr4, prpr5, prpr6, prpr7, prpr8)
+#save(prpr_fits, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/prpr_fits.Rda") #POL
+
+prpr <- prpr  %>% select(!year)  %>% 
+      rename("year" = "Ayear")
+
+      
+prpr_fits <- prpr_fits  %>% select(!year)  %>% 
+      rename("year" = "Ayear")
 
 
 prprO <- inner_join(prpr, prpr_fits)  %>% 
@@ -378,12 +455,12 @@ yi3 <- yi3 %>%
 yi3[which(yi3$USDAfarmShrTot==0),"USDAfarmShrTot"] <- NA
 
 
-mkYi3 <- filter(magExp, iso3c == "USA") %>%
-  select(year, farmShrTot) %>%
-  as.magpie() %>%
+mkYi3 <- filter(magExpAgg, iso3c == "USA") %>%
+  select(iso3c, year, Uncertainty, farmShrTot)  %>% 
+  as.magpie(spatial = 1, temporal = 2, tidy = TRUE) %>%
   time_interpolate(interpolated_year = c(1990:2020), integrate_interpolated_years = TRUE) %>%
-  as.data.frame(rev = 2) %>%
-  pivot_wider(names_from = "data", values_from = ".value")
+  as.data.frame(rev = 2) %>% 
+  pivot_wider(names_from = "Uncertainty", values_from = ".value")
 
 compyi3 <- mkYi3 %>%
   right_join(yi3) %>%

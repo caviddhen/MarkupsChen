@@ -42,7 +42,7 @@ FAOmarkuppT2 <- mutate(FAOmarkuppT,
 #                        !(iso3c == "LUX"))
 # FAOmarkuppT2 <- filter(FAOmarkuppT2, FAOmarkup_perT < 10000)
 
-#linear model
+#linear model 
 lm_m <- function(df, y){
   lm(FAOmarkup_perT ~ loggdp, weight=weight,
      data = df)
@@ -174,6 +174,7 @@ load("/p/projects/magpie/users/davidch/ICPdata_cluster/brmMarkupProdBeverages.Rd
 load("/p/projects/magpie/users/davidch/ICPdata_cluster/brmMarkupProdBeveragesLAST.Rda")
 load("/p/projects/magpie/users/davidch/ICPdata_cluster/brmMarkupProdBeveragesLASTSTU8.Rda")
 
+ranef(brmMarkupProdBeveragesLASTSTU8)
 
 ###rev1
 load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev12.Rda")
@@ -271,11 +272,37 @@ load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev1OutConsTighte
 load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev1OutConsTighterHigherFilterpop1outliPopWSplit12NY.Rda")
 
 
-brmRev1OutConsTighterHigherFilterpop1outliPopWSplit12NY
+load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev1OutConsTighterHigherFilterpop1outliPopWSplit13Y.Rda")
+load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev1OutConsTighterHigherFilterpop1outliPopWSplit13NY.Rda")
 
-brmMarkupProdBF <- brmRev1OutConsTighterHigherFilterpop1outliPopWSplit12NY
+load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev1OutConsTighterHigherFilterpop1outliPopWSplit14NY.Rda")
+load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev1OutConsTighterHigherFilterpop1outliPopWSplit17NY.Rda")
+load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev1OutConsTighterHigherFilterpop1outliPopWSplit20Y.Rda")
+
+load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev1OutConsTighterHigherFilterpop1outliPopWSplit21Y7Fin.Rda")
+
+
+
+brmMarkupProdBF <- brmRev1OutConsTighterHigherFilterpop1outliPopWSplit21Y7
 bayes_R2(brmMarkupProdBF)
 loo_R2(brmMarkupProdBF)
+
+
+post <- pp_check(brmMarkupProdBF, ndraws = 50) + xlim(-5000, 15000)
+ggsave(post, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/FigS7b.pdf", height = 12, width = 16)
+ggsave(post, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/FigS7b.png", height = 12, width = 16)
+
+
+
+
+brmRev1OutConsTighterHigherFilterpop1outliPopWSplit21Y5 <- brm(
+#bf(value|weights(weight) ~  a*(b^lngdp)  + c*year,
+bf(value|weights(weight) ~  a*(b^lngdp)  + c*year,
+  a ~  (1|BHName|Cater)  , b ~  (1|BHName), c ~ 1,
+ nl = TRUE), init = 0,
+data = markupCater, family = student(), prior = markupPriorTightLN, 
+ iter = 5000,
+control = list(adapt_delta = 0.99, max_treedepth =12)) 
 
 
 fitted <- fitted(brmMarkupProdBF, markupCater)
@@ -305,6 +332,16 @@ library(scales)
 supp.labs <- c("Food-Away-From-Home", "Food-At-Home")
 names(supp.labs) <- c("Cater", "noCater")
 
+
+levels(y$BHName) <- c(levels(y$BHName), "Lamb, mutton \n and goat")
+levels(y$BHName)[match("Lamb, mutton and goat",levels(y$BHName))] <- "Lamb, mutton \n and goat"
+
+levels(y$BHName) <- c("Bread and cereals", "Rice", 
+                                                      "Fruit", "Vegetables",
+                                                         "Beef and veal", "Poultry", "Pork", "Lamb, mutton \n and goat",
+                                                         "Milk products", "Eggs", "Processed")
+
+
 brmsplot <- ggplot(filter(y, pop > 1, value < 20000), aes(y=Estimate, x = gdp)) +
 #  geom_ribbon(aes(ymin = `predQ2.5`, ymax = `predQ97.5`), fill =  "#c5e1cc", alpha = 0.5 ) +
   geom_ribbon(aes(ymin = `Q2.5`, ymax = `Q97.5`), fill = "#ADDEB9") + 
@@ -312,22 +349,22 @@ brmsplot <- ggplot(filter(y, pop > 1, value < 20000), aes(y=Estimate, x = gdp)) 
   geom_line(aes(size = 1), size =1, color = "darkgreen") +
   ggtitle("Consumer Price Markups by Price and Consumption") +
   geom_hline(yintercept=0, linetype="dashed") +
-  labs( y = "Markup (USD$05 / tWM)", x = expression("GDPpc"))  +
+  labs( y = "Markup (USD$17 / tWM)", x = expression("GDPpc"))  +
 facet_grid(rows = vars(Cater), cols = vars(BHName),
            scales = "fixed", 
           labeller = labeller( Cater = supp.labs )) +
   ggrepel::geom_text_repel(aes(label = label), max.overlaps = 30) +
-#scale_x_log10(labels = label_log(digits= 2)) +
-ylim(-3000, 20000) +
-   theme_bw(base_size = 28) + 
+scale_x_log10(labels = label_log(digits= 2)) +
+ylim(-3000, 18000) +
+   theme_bw(base_size = 26) + 
   theme(legend.position = "none") # facet_wrap(~Bhagg, scales = "free")
 
 
 brmsplot
   
-ggsave(brmsplot, height =  15, width = 27,
- file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev1OutConsTighterHigherFilterpop1outliPopWSplit12NY.pdf")
-ggsave(brmsplot, height =  15, width = 23, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/Fig12NW.png")
+ggsave(brmsplot, height =  15, width = 30,
+ file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/Fig1U.pdf")
+ggsave(brmsplot, height =  15, width = 30, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/Fig1U.png")
 
 
 
@@ -338,24 +375,24 @@ brmsplotnolog <- ggplot(y, aes(y=Estimate, x = gdp)) +
   geom_line(aes(size = 1), size =1, color = "darkgreen") +
   ggtitle("Consumer Price Markups by Price and Consumption") +
   geom_hline(yintercept=0, linetype="dashed") +
-  labs( y = "Markup (USD$05 / tWM)", x = expression("GDPpc"))  +
+  labs( y = "Markup (USD$17 / tWM)", x = expression("GDPpc"))  +
 facet_grid(rows = vars(Cater), cols = vars(BHName),
            scales = "fixed", 
           labeller = labeller( Cater = supp.labs )) +
   ggrepel::geom_text_repel(aes(label = label), max.overlaps = 30) +
-scale_x_log10(labels = label_log(digits= 2)) +
+#scale_x_log10(labels = label_log(digits= 2)) +
  #scale_x_log10(breaks = 500 * 2^seq(0, 9, by = 1),
  #               labels = label_dollar(scale_cut = cut_short_scale())) +
-#ylim(-5000, 15000) +
-   theme_bw(base_size = 28) + 
+ylim(-3000, 18000) +
+   theme_bw(base_size = 26) + 
   theme(legend.position = "none") # facet_wrap(~Bhagg, scales = "free")
 
 
 brmsplotnolog
   
-ggsave(brmsplotnolog, height =  15, width = 23,
- file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/FigS1.pdf")
-ggsave(brmsplotnolog, height =  15, width = 23, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/FigS1.png")
+ggsave(brmsplotnolog, height =  15, width = 30,
+ file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/FigS1U.pdf")
+ggsave(brmsplotnolog, height =  15, width = 30, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/FigS1U.png")
 
 
 coef(brmMarkupProdBeveragesLAST)
@@ -385,9 +422,9 @@ br2 <- bayes_R2(brmMarkupProdBF)
 
  coef(brmMarkupProdBF)$BHName[,,"b_Intercept"] %>% as.data.frame() %>% 
 mutate(Estimate = round(log(Estimate), 3), "Q2.5" = round(log(Q2.5),3), "Q97.5" = round(log(Q97.5), 3))  %>% 
-select(!Est.Error)  %>% write.csv(file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/IncomeElasticitiesBeverages.csv")
+select(!Est.Error)  %>% write.csv(file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/IncomeElasticities.csv")
 
-
+coef(brmMarkupProdBF)$Cater
 
 
 filter(z, iso3c == "COG" )

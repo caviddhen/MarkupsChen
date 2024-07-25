@@ -1,5 +1,5 @@
 
-library(mrmarkup)
+library(MarkupsChen)
 library(brms)
 library(magpie4)
 POLgdx <-  "/p/projects/magpie/users/davidch/magpie_versions/marketingMargins/magpie/output/Margins_SSP2-POL_2024-04-23_12.52.33/fulldata.gdx"
@@ -23,7 +23,7 @@ iG$incomeG <- factor(iG$incomeG, levels = c("HIC", "UMIC","LMIC", "LIC"))
 
 POL <- POL  %>% inner_join(iG)  %>% 
     group_by(incomeG, year)  %>% 
-    summarise(farmShrTot = weighted.mean(farmShrTot, w=totExp))
+    summarise(farmShrTot = weighted.mean(.data$farmShrTot, w=.data$totExp))
 
 
 ctax <- PriceGHG(POLgdx)[,,"co2_c"][,,"peatland"] %>% collapseNames()  %>% 

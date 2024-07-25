@@ -1,33 +1,75 @@
 MagplottingScripts <- function(BAUgdx, POLgdx){
 
-library(MarkupsChen)
+setwd("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/")
+library(mrmarkup)
 library(brms)
+POLgdx <-  "/p/projects/magpie/users/davidch/magpie_versions/marketingMargins/magpie/output/Margins_SSP2-POL_2024-04-23_12.52.33/fulldata.gdx"
+BAUgdx <-  "/p/projects/magpie/users/davidch/magpie_versions/marketingMargins/magpie/output/Margins_SSP2-BAU_2024-04-23_12.49.35/fulldata.gdx"
 
-## for sensitivity select the ssp desired
-runs <- list.files("./magpie/output/", 
-                   pattern = "fulldata.gdx",
-                   recursive = TRUE, full.names = TRUE)
-#ssp1
-POLgdx <- runs[2]
-BAUgdx <- runs[1]
-#ssp3
-POLgdx <- runs[c(6)]
-BAUgdx <- runs[5]
+## for sensitivity
+runs <- list.files("/p/projects/magpie/users/davidch/magpie_versions/marketingMargins/magpie/output/", 
+                   pattern = "fulldata.gdx", recursive = TRUE, full.names = TRUE)
 
-#ssp4 
-POLgdx <- runs[c(8)]
-BAUgdx <- runs[7]
+ssp1 <- runs[c(1:2)]
 
-#ssp5
-POLgdx <- runs[c(10)]
-BAUgdx <- runs[9]
+p1 <- map(ssp1, FoodExpMagpieMarkup, level = "iso", type = "consumer", prodAggr = FALSE, afterShock = TRUE,
+                                povmodel = FALSE, validYi = FALSE)
+
+ssp2 <- runs[c(3:4)]
+
+p2 <- map(ssp2, FoodExpMagpieMarkup, level = "iso", type = "consumer", prodAggr = FALSE, afterShock = TRUE,
+                                povmodel = FALSE, validYi = FALSE)
+
+save(p2, file = "./../sensitivity/ssp2.Rda")
+rm(p2)
+gc()
+
+
+ssp3 <- runs[c(5:6)]
+
+p3 <- map(ssp3, FoodExpMagpieMarkup, level = "iso", type = "consumer", prodAggr = FALSE, afterShock = TRUE,
+                                povmodel = FALSE, validYi = FALSE)
+
+
+save(p3, file = "./../sensitivity/ssp3.Rda")
+rm(p3)
+gc()
+
+
+ssp4 <- runs[c(7:8)]
+p4 <- map(ssp4, FoodExpMagpieMarkup, level = "iso", type = "consumer", prodAggr = FALSE, afterShock = TRUE,
+                                povmodel = FALSE, validYi = FALSE)
+save(p4, file = "./../sensitivity/ssp4.Rda")
+rm(p4)
+gc()
+
+ssp5 <- runs[c(9:10)]
+p5 <- map(ssp5, FoodExpMagpieMarkup, level = "iso", type = "consumer", prodAggr = FALSE, afterShock = TRUE,
+                                povmodel = FALSE, validYi = FALSE)
+save(p5, file = "./../sensitivity/ssp5.Rda")
+rm(p5)
+gc()
+
+
+
+load("./../sensitivity/ssp1.Rda") 
+
+load("./../sensitivity/ssp2.Rda") 
+
+load("./../sensitivity/ssp3.Rda") 
+
+load("./../sensitivity/ssp4.Rda") 
+
+load("./../sensitivity/ssp5.Rda") 
+
 
 
 setConfig(forcecache=T)
 BAUm <- FoodExpMagpieMarkup(gdx = BAUgdx, level = "iso", type = "consumer", prodAggr = FALSE, afterShock = TRUE,
                                 povmodel = FALSE, validYi = FALSE)
-BAUm <- BAUm  %>% mutate(scen = "BAU")
 
+BAUm <- BAUm  %>% mutate(scen = "BAU")
+                               
 POL <- FoodExpMagpieMarkup(gdx = POLgdx, level = "iso", type = "consumer", prodAggr = FALSE, afterShock = TRUE,
                                 povmodel = FALSE, validYi = FALSE)
 
@@ -47,10 +89,13 @@ markups <- inner_join(markups, def2020) %>%
          mutate(PriceIndex = Price/pr20) %>%
        select(!pr20)
 
+
 markups$`Price Type` <- factor(markups$`Price Type`,
                                levels = c("prodPrice", "caterPrice", "noCaterPrice"))
 
 
+# reg <- "EUR"
+#
 ### global price plot
 gdppc <- calcOutput("GDPpc", aggregate = FALSE)[,,"gdppc_SSP2"]  %>% 
         as.data.frame(rev = 2)  %>% 
@@ -289,8 +334,7 @@ ggplot(filter(markupsGloG,
 ### facet Scen and BAU GLO prices
 a <- ggplot(filter(markupsGloG, year %in% seq(2020, 2050, 5)),
        aes(x = year, color = `Price Type`))+
-    geom_ribbon(aes(ymin = q25, ymax = q95, fill = `Price Type`), alpha = 0.2, show.legend = FALSE) +
-  theme(legend.key = element_blank()) +  
+    geom_ribbon(aes(ymin = q25, ymax = q95, fill = `Price Type`), alpha = 0.2) + 
   geom_line(aes(y = Est), lwd = 1.4)+
   facet_wrap(~ scen, scales = "fixed", nrow = 1) +
   ggtitle(paste("a) Global Average Food Prices \n     Baseline (BAU) and Climate Mitigation (POL) Scenarios")) +
@@ -300,11 +344,11 @@ a <- ggplot(filter(markupsGloG, year %in% seq(2020, 2050, 5)),
    scale_fill_manual( guide = "none",
                       values = c("#1E5B3E", "#348C62",  "#54D598"))+
   theme_bw(base_size = 20)
-a
+
 library(gridExtra)
 filter(markupsGloG, year %in% c(2020, 2050))  %>% 
-pivot_wider(names_from = year, values_from = c(Est, q25, q95))  %>% 
-mutate(ch = `Est_2050`/`Est_2020`)  %>% as.data.frame
+pivot_wider(names_from = year, values_from = Price)  %>% 
+mutate(ch = `2050`/`2020`)
 
 ### make relative to BAU
 
@@ -347,8 +391,7 @@ ggplot(filter(markupsRatioGlo, year %in% seq(2020,2050,5)),
 
 ggplot(filter(markupsRatioGloProd, year %in% seq(2020,2050,5)),
        aes(x = year, color = `Price Type`))+
-  geom_ribbon(aes(ymin = q25, ymax = q95), alpha = 0.2, show.legend = FALSE) +
-  theme(legend.key = element_blank()) +  + 
+  geom_ribbon(aes(ymin = q25, ymax = q95), alpha = 0.2) + 
   geom_line(aes(y = ratio), lwd = 1.4)+
   facet_wrap( ~ BHName, scales = "free", nrow =2) +
   ggtitle(paste("POL:BAU Price Ratio")) +
@@ -361,50 +404,46 @@ ggplot(filter(markupsRatioGloProd, year %in% seq(2020,2050,5)),
 
 b <- ggplot(filter(markupsRatioGloIG, year %in% seq(2020,2050,5)),
       aes(x = year, color = `Price Type`))+
-  geom_ribbon(aes(ymin = q25, ymax = q95), alpha = 0.2, show.legend = FALSE) +
-  theme(legend.key = element_blank()) +  
+  geom_ribbon(aes(ymin = q25, ymax = q95), alpha = 0.2) + 
   geom_line(aes(y = ratio), lwd = 1.4)+
   facet_wrap( ~ incomeG, scales = "free", nrow = 1) +
   ggtitle(paste("b) POL to BAU Price Ratio by Income Group")) +
-  scale_color_manual(labels = c("Consumer Price FAFH", "Consumer Price FAH", "Prod Price" ),
-                    values = c("#1E5B3E", "#348C62",  "#54D598")) +
-   scale_fill_manual( guide = "none",
+  scale_color_manual(labels =  c("Consumer Price FAFH", "Consumer Price FAH", "Prod Price" ),
+                     values = c( "#54D598", "#1E5B3E", "#348C62"),
+                     guide = guide_legend(reverse = TRUE) )+
+     scale_fill_manual( guide = "none",
                       values = c("#1E5B3E", "#348C62",  "#54D598"))+
   theme_bw(base_size = 20)
 
 b
 filter(markupsRatioGloIG, year %in% c(2020, 2050), 
-incomeG %in% c("HIC","LIC"))  %>% as.data.frame()
+incomeG %in% c("HIC","LIC")) 
+
+
 
 
 c <- ggplot(filter(markupsRatioGlo3, year %in% seq(2020,2050,5)),
         aes(x = year, color = `Price Type`))+
-  geom_ribbon(aes(ymin = q25, ymax = q95), alpha = 0.2, show.legend = FALSE) +
-  theme(legend.key = element_blank()) +  
+  geom_ribbon(aes(ymin = q25, ymax = q95), alpha = 0.2) + 
   geom_line(aes(y = ratio), lwd = 1.4)+
   facet_wrap( ~ t, scales = "free", nrow = 1) +
   ggtitle(paste("c) POL to BAU Price Ratio by Product ")) +
-  scale_color_manual(labels = c("Consumer Price FAFH", "Consumer Price FAH", "Prod Price" ),
-                    values = c("#1E5B3E", "#348C62",  "#54D598")) +
-   scale_fill_manual( guide = "none",
+  scale_color_manual(labels =  c("Consumer Price FAFH", "Consumer Price FAH", "Prod Price" ),
+                     values = c( "#54D598", "#1E5B3E", "#348C62"),
+                     guide = guide_legend(reverse = TRUE) )+
+     scale_fill_manual( guide = "none",
                       values = c("#1E5B3E", "#348C62",  "#54D598"))+
   theme_bw(base_size = 20)
 c
 library(gridExtra)
 out1 <- grid.arrange(a,b,c)
 out1
-#ggsave(out1, file = "./Fig5.pdf", height = 18, width = 15)
-#ggsave(out1, file = "./Fig5.png", height = 18, width = 15)
-ggsave(out1, file = "./FigS4ssp5.pdf", height = 18, width = 15)
-ggsave(out1, file = "./FigS4ssp5.png", height = 18, width = 15)
-
-
-
+ggsave(out1, file = "./Fig5.pdf", height = 18, width = 15)
+ggsave(out1, file = "./Fig5.png", height = 18, width = 15)
 
 ggplot(filter(markupsRatioGloG, year %in% seq(2020,2050,5)),
         aes(x = year, color = `Price Type`))+
-  geom_ribbon(aes(ymin = q25, ymax = q95), alpha = 0.2, show.legend = FALSE) +
-  theme(legend.key = element_blank()) + 
+  geom_ribbon(aes(ymin = q25, ymax = q95), alpha = 0.2) + 
   geom_line(aes(y = ratio), lwd = 1.4)+
   #facet_wrap( ~ BHName, scales = "free", nrow = 4) +
   ggtitle(paste("POL:BAU Price Ratio")) +
@@ -474,17 +513,17 @@ PLratiobarp <- ggplot(PLratiobar,
   theme_bw(base_size = 29)
 
 
-PLratiobar %>% select(yearscen, Est, q25, q95)  %>% 
- pivot_wider(names_from = yearscen, values_from = c(Est, q25, q95))  %>% 
- mutate(`2050_BAUR` = `Est_2050_BAU`/`Est_2020_BAU`,
-     `2050_POLR` = `Est_2050_POL`/`Est_2020_BAU` )  %>% as.data.frame()
+PLratiobar %>% select(yearscen, LivestockPlantRatio)  %>% 
+ pivot_wider(names_from = yearscen, values_from = LivestockPlantRatio)  %>% 
+ mutate(`2050_BAU` = `2050_BAU`/`2020_BAU`,
+     `2050_POL` = `2050_POL`/`2020_BAU` )
 
 PLratiobar  %>% filter(incomeG == "HIC")
 
 
 ggsave(PLratiobarp, file = "./Fig6.pdf", height = 12, width = 16)
 ggsave(PLratiobarp, file = "./Fig6.png", height = 12, width = 16)
-PLratiobarp
+
 
 
 #use FAO consumption
@@ -517,5 +556,6 @@ ggplot(filter(markups, iso3c == iso,
                      guide = guide_legend(reverse = TRUE) ) +
   theme_bw(base_size = 18)
 }
+
 
 

@@ -44,7 +44,7 @@ prpr[,,liveW[i]] <- ifelse(prpr[,,liveW[i]] == 0,
 
 
 #convert from 2005 constant US$ to 2017 US$ MER based on Consumer PRice INdex
-prpr1 <- prpr * 1.23  # convert with CPI
+prpr <- prpr * 1.23  # convert with CPI
 
 
 #production weight from ProductionItem to FoodBalance Item

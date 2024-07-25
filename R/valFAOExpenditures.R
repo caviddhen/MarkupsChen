@@ -116,10 +116,10 @@ markupPrNC <- inner_join(pred, gdppc)  %>%
                  gdp = gdppc)
 
 
-load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev1OutConsTighterHigherFilterpop1outliPopWSplit4.Rda")
+load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev1OutConsTighterHigherFilterpop1outliPopWSplit21Y7Fin.Rda")
 
 
-brmMarkupProdBF <- brmRev1OutConsTighterHigherFilterpop1outliPopWSplit4
+brmMarkupProdBF <- brmRev1OutConsTighterHigherFilterpop1outliPopWSplit21Y7
 
 
 #brmMarkupProdBF <- brmMarkupihs
@@ -128,19 +128,28 @@ brmMarkupProdBF <- brmRev1OutConsTighterHigherFilterpop1outliPopWSplit4
 #reverse asinh
 markupPrC1 <- cbind(filter(markupPrC, year < 2010), 
                      fitted(brmMarkupProdBF ,filter(markupPrC, year < 2010)))
-markupPrC2 <- cbind(filter(markupPrC, year > 2010), 
-                     fitted(brmMarkupProdBF ,filter(markupPrC, year > 2010)))
-markupPrC <- rbind(markupPrC1, markupPrC2)
-rm(markupPrC1, markupPrC2)
+markupPrC2 <- cbind(filter(markupPrC, year %in% c(2010:2015)), 
+                     fitted(brmMarkupProdBF ,filter(markupPrC, year %in% c(2010:2015))))
+markupPrC3 <- cbind(filter(markupPrC, year %in% c(2016:2019)), 
+                     fitted(brmMarkupProdBF ,filter(markupPrC, year %in% c(2016:2019))))
+
+
+markupPrC <- rbind(markupPrC1, markupPrC2, markupPrC3)
+rm(markupPrC1, markupPrC2, markupPrC3)
 gc()
 
-markupPrNC1 <- cbind(filter(markupPrNC, year < 2010), 
-                     fitted(brmMarkupProdBF ,filter(markupPrNC, year < 2010)))
-markupPrNC2 <- cbind(filter(markupPrNC, year > 2010), 
-                     fitted(brmMarkupProdBF ,filter(markupPrNC, year > 2010)))
-markupPrNC <- rbind(markupPrNC1, markupPrNC2)
-rm(markupPrNC1, markupPrNC2)
+markupPrNC1 <- cbind(filter(markupPrNC, year < 2005), 
+                     fitted(brmMarkupProdBF ,filter(markupPrNC, year < 2005)))
+markupPrNC11 <- cbind(filter(markupPrNC, year %in%  c(2005:2010)), 
+                     fitted(brmMarkupProdBF ,filter(markupPrNC, year %in%  c(2005:2010))))
+markupPrNC2 <- cbind(filter(markupPrNC,  year %in% c(2011:2015)), 
+                     fitted(brmMarkupProdBF ,filter(markupPrNC,  year %in% c(2011:2015))))
+ markupPrNC3 <- cbind(filter(markupPrNC,  year %in% c(2016:2019)), 
+                     fitted(brmMarkupProdBF ,filter(markupPrNC,  year %in% c(2016:2019))))
+markupPrNC <- rbind(markupPrNC1, markupPrNC11, markupPrNC2,markupPrNC3)
+rm(markupPrNC1,markupPrNC11, markupPrNC2, markupPrNC3)
 gc()
+
 markupPr <- rbind(markupPrC, markupPrNC)  %>%
             inner_join(prpr) %>%
               rename("markup" = Estimate)  %>% 
@@ -154,8 +163,8 @@ markupPr <- rbind(markupPrC, markupPrNC)  %>%
   pivot_longer(cols = c(magPrice,Cater_consPrice, Cater_consPrice025, Cater_consPrice975,
                        noCater_consPrice, noCater_consPrice025, noCater_consPrice975),
              names_to = "Price Type", values_to = "Price")
-
-
+save(markupPr, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/markupPr.Rda")
+load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/markupPr.Rda")
   #pivot_longer(cols = c(magPrice, noCater, cater),
   #            names_to = "Price Type", values_to = "Price")
 
@@ -208,6 +217,16 @@ plotp1[which(plotp1[,"Price Type"] == "noCater"), "Price Type"] <- "Food-At-Home
 
 plotp1$`Price Type` <- factor(plotp1$`Price Type`, levels = c("Food-Away-From-Home", "Food-At-Home","Producer"))
 
+plotp1$BHName <- as.factor(plotp1$BHName)
+levels(plotp1$BHName) <- c(levels(plotp1$BHName), "Lamb, mutton \n and goat")
+levels(plotp1$BHName)[match("Lamb, mutton and goat",levels(plotp1$BHName))] <- "Lamb, mutton \n and goat"
+
+levels(plotp1$BHName) <- c("Bread and cereals", "Rice", 
+                                                      "Fruit", "Vegetables",
+                                                         "Beef and veal", "Poultry", "Pork", "Lamb, mutton \n and goat",
+                                                         "Milk products", "Eggs", "Processed")
+
+
 
 prices <- ggplot(filter(plotp1, iso3c %in% c("IND", "USA"))) + 
  geom_ribbon(aes(x= year , ymin = ylo, ymax = yhi, fill = `Price Type`), alpha=0.2) +
@@ -221,28 +240,30 @@ prices <- ggplot(filter(plotp1, iso3c %in% c("IND", "USA"))) +
 prices
 
 ggsave(prices, height = 16, width = 12, 
-   filename = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/plots/Prices11.png")
+   filename = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/Prices1711.png")
 
-pricesF <- ggplot(filter(plotp1, iso3c %in% c("IND", "USA"))) + 
+
+
+pricesF <- ggplot(filter(plotp1, iso3c %in% c("USA", "IND"))) + 
  geom_ribbon(aes(x= year , ymin = ylo, ymax = yhi, fill = `Price Type`), alpha=0.2) +
   geom_line(aes(x = year, y = y, color = `Price Type`), lwd = 1.4) +
-  facet_wrap( BHName ~ iso3c, nrow = 7, scales = "free" ,
+  facet_grid( iso3c ~ BHName,  scales = "free" ,
               labeller = label_wrap_gen(multi_line=FALSE)) +
   ggtitle(paste("Food Prices")) +
   labs(x = "Year", y = "USD$17/kg") +
-  theme_bw(base_size = 24) +
+  theme_bw(base_size = 22) +
   expand_limits(y = 0) +
   scale_x_continuous(breaks = ~ axisTicks(., log = FALSE))
 pricesF
 
 
-ggsave(pricesF, height = 24, width = 12, filename = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/plots/final/Fig21.png")
-ggsave(pricesF, height = 24, width = 12, filename = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/plots/final/Fig21.pdf")
+ggsave(pricesF, height = 10, width = 38, filename = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/Fig2.png")
+ggsave(pricesF, height = 10, width = 38, filename = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/Fig2.pdf")
 
 t <- plotp1  %>% select(!c(ylo, yhi))  %>% 
   pivot_wider(names_from = "Price Type", values_from = "y")  %>% 
   mutate(AFHratio = Producer/`Food-Away-From-Home`, AHratio = Producer/`Food-At-Home`)  
-filter(t,  year == "2019", iso3c %in% c("IND", "USA"))  %>% arrange(desc(AFHratio))
+filter(t,  year == "2019", iso3c %in% c("IND", "USA"))  %>% arrange(desc(AFHratio))  %>% print(n=100)
 
 
 AFH <- regressFAFH(weight = FALSE, plot = TRUE)  %>% 
@@ -371,9 +392,9 @@ scale_color_manual(values = c("#c54a4a", "#1f4edb"))+
 
 usdacompP
 ggsave(usdacompP, height =  40, width = 24, 
-file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/plots/FigS21split.png")
+file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/FigS2.png")
 ggsave(usdacompP, height =  40, width = 24, 
-file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/plots/FigS21split.pdf")
+file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/FigS2.pdf")
 
 
 countries <- c("CHN","IND", "USA", "IDN","PAK","NGA", "BRA", "BGD", "RUS", "MEX", "DEU", "FRA")
@@ -395,16 +416,16 @@ scale_color_manual(values = c("#c54a4a", "#1f4edb"))+
 
 usdacompPSub
 ggsave(usdacompPSub, height =  12, width = 18, 
-file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/plots/Fig3split.png")
+file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/Fig3.png")
 ggsave(usdacompPSub, height =  12, width = 18, 
-file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/plots/Fig3split.pdf")
+file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/Fig3.pdf")
 
 library(rworldmap)
 library(luplot)
 
-pdf("/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/Fig4a.pdf", width= 10, height = 7)
+pdf("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/Fig4a.pdf", width= 10, height = 7)
 map <- plotcountrymap(mag[,2019, ],  numCats = 5,
-            catMethod = c(0, 0.2, 0.4, 0.6, 0.8, 1), colourPalette = c('#f1eef6','#bdc9e1','#74a9cf','#2b8cbe','#045a8d'),
+            catMethod = c(0, 0.2, 0.4, 0.6, 0.8), colourPalette = c('#f1eef6','#bdc9e1','#2b8cbe','#045a8d'),
             mapTitle = "a) Farm share of Food Dollar 2019 \n FAH + FAFH Food Expenditures", 
             addLegend = FALSE,
             borderCol = "black")
@@ -568,8 +589,8 @@ fig4bSI <- ggplot(compFAO4) +
 
   ggtitle("Farm Share of FAH Expenditures \n  vs FAO FAAFH - accomodation")
   fig4bSI
-ggsave(fig4bSI, height =  17, width = 23, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/figS3.png")
-ggsave(fig4bSI, height =  17, width = 23, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/fig4S3.pdf")
+ggsave(fig4bSI, height =  17, width = 23, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/figS3.png")
+ggsave(fig4bSI, height =  17, width = 23, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/figS3.pdf")
 
 countries
 fig4b <- ggplot(filter(compFAO4, iso3c %in% countries)) +
@@ -647,8 +668,8 @@ lims(y = c(0,0.69)) +
   ggtitle("b) Farm Share of Food Expenditures")
 
 fig4b
-ggsave(fig4b, height =  15, width = 22, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/fig4b.png")
-ggsave(fig4b, height =  15, width = 22, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/fig4b.pdf")
+ggsave(fig4b, height =  15, width = 22, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/fig4b.png")
+ggsave(fig4b, height =  15, width = 22, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/fig4b.pdf")
 
 
 ## farm shares by product
@@ -688,20 +709,46 @@ magExpP <- magExp  %>%
             farmShrTotH = totfarmExp/totExpH)  %>% 
     select(year, BHName, incomeG, farmShrTotL, farmShrTot, farmShrTotH)  
 
+
+magExpPi <- magExp  %>% 
+          inner_join(kBH)  %>% 
+           group_by(year, BHName, iso3c)  %>% 
+      summarise(fahExp = sum(fahExp),
+               fafhExp = sum(fafhExp),
+               fahExpL = sum(fahExpL),
+               fafhExpL = sum(fafhExpL),
+               fahExpH = sum(fahExpH),
+               fafhExpH = sum(fafhExpH),
+                farmAHexp = sum(farmAHexp),
+               farmAFHexp = sum(farmAFHexp),
+               )  %>% 
+     mutate(totExp = fahExp + fafhExp,
+            totExpL = fahExpL + fafhExpL,
+            totExpH = fahExpH + fafhExpH,
+            totfarmExp = farmAHexp + farmAFHexp,
+            farmShrTot = totfarmExp/totExp, 
+            farmShrTotL = totfarmExp/totExpL, 
+            farmShrTotH = totfarmExp/totExpH)  %>% 
+    select(year, BHName, iso3c, farmShrTotL, farmShrTot, farmShrTotH)  
+
+filter(magExpPi, iso3c == "USA", year == 2013)
+
+
+
 figS4 <- ggplot(magExpP, aes(x=year)) +
   geom_line(aes(y= farmShrTot), color = "#135fa5", size = 1.5) +
-  geom_ribbon(aes(ymin = farmShrTotL, ymax = farmShrTotH), fill = "#0084ff", alpha = 0.5) +
+  geom_ribbon(aes(ymin = farmShrTotH, ymax = farmShrTotL), fill = "#0084ff", alpha = 0.5) +
   facet_grid(incomeG ~ BHName) +
-  theme_bw(base_size = 30) + 
-    scale_x_continuous(breaks = c(2005,2010,2015)) +
+  theme_bw(base_size = 18) + 
+   scale_x_continuous(breaks = c(2005,2010,2015)) +
   ylab("Farm Share, Total Expenditures") + 
   ggtitle("Farm Shares by Product across countries aggregated by income level")
 
 figS4
-ggsave(figS4, height =  18, width = 24, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/figS5.png")
-ggsave(figS4, height =  18, width = 24, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/figS5.pdf")
+ggsave(figS4, height =  18, width = 24, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/figS4prod.png")
+ggsave(figS4, height =  18, width = 24, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/figS4prod.pdf")
 
-filter(magExpP, year == 2019)
+filter(magExpP, year == 2019)  %>% print(n=100)
 
 
 
@@ -815,8 +862,8 @@ b
 
 
 
-ggsave(b, height =  12, width = 19, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/FigS4.png")
-ggsave(b, height =  12, width = 19, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/FigS4.pdf")
+ggsave(b, height =  12, width = 19, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/FigS4Yi.png")
+ggsave(b, height =  12, width = 19, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/FigS4Yi.pdf")
 
 
 

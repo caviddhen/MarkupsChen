@@ -33,7 +33,7 @@ ind <- data.frame("country" = "India", "kcal_shr" = 0.05, "year" = 2010 ) #Law e
 chn <-  data.frame("country" = "China", "kcal_shr" = 0.26, "year" = 2015 ) #Xue et al. 2021
 
 kcal_fafh <- rbind(kcal_fafh, chn)
-kcal_fafh <- rbind(kcal_fafh, ind, chn)
+#kcal_fafh <- rbind(kcal_fafh, ind, chn)
 kcal_fafh$iso3c <- toolCountry2isocode(kcal_fafh$country, mapping = c("The Netherlands" = "NLD"))
 
 gdppcppp <- calcOutput("GDPpc", aggregate=F)
@@ -53,6 +53,7 @@ pop_iso <- magclass::as.data.frame(pop_iso[,,"pop_SSP2"]) %>%
   mutate(year = as.numeric(as.character(year)))
 
 catShr <- inner_join(catShr, pop_iso)
+catShr[14,6] <- 0
 
 if (weight) {
  lm_m <- function(df){
@@ -93,6 +94,7 @@ catShr$predlm <- predict(catlm)
 #predict(catlm, newdata = t)
 
 #efrons_pseudo_r2(catlm)
+catShr[14,6] <- 1300
 
 if(plot){
 s5 <- ggplot(catShr, aes(x=gdp, y = kcal_shr)) +
@@ -106,8 +108,8 @@ s5 <- ggplot(catShr, aes(x=gdp, y = kcal_shr)) +
   guides(size =FALSE)+
   ggrepel::geom_text_repel(aes(label = iso3c), max.overlaps = 15)  # facet_wrap(~Bhagg, scales = "free")
 s5
-ggsave(s5, height =  8, width = 12, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/figS5.png")
-ggsave(s5, height =  8, width = 12, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/plots/final/figS5.pdf")
+ggsave(s5, height =  8, width = 12, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/figS5AFH.png")
+ggsave(s5, height =  8, width = 12, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/FinalPlots/figS5AFH.pdf")
 
 }
 
