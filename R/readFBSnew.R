@@ -15,7 +15,7 @@ readFBSnew <- function(level = "k", return = "FBS"){
 
 ### csv is FAOSTAT Food Balance sheets Food  and Processing demand
 fb <-  read.csv(system.file("extdata",mapping="FAOSTAT_FB.csv",
-                            package = "MarkupsChen"))  %>%
+                            package = "mrmarkup"))  %>%
   select(Area, Element, Item.Code, Item, Year, Value)   %>%
   #filter(Year %in% c(2011, 2017))  %>%
   unite(col = "prod", c(Item.Code, Item), sep = "|")  %>%
@@ -29,20 +29,15 @@ fb <-  read.csv(system.file("extdata",mapping="FAOSTAT_FB.csv",
 
 fb <- filter(fb, !is.na(Area))
 
-
-
 hr1 <-as.magpie(fb, spatial = 1, temporal = 2, tidy = T)
 hr1[is.na(hr1)] <- 0
 
-LEMmapping <- read.csv(system.file("extdata",mapping="newConsLEMmapping.csv",
-                     package = "MarkupsChen"))
-
-kmapping <- read.csv(system.file("extdata",mapping="newFAOitems_online_DRAFT.csv",
-                     package = "MarkupsChen"))
+ kmapping <- read.csv(system.file("extdata",mapping="newFAOitems_online_DRAFT.csv",
+                               package = "mrmarkup"))
 
 kpr <- c(findset("kpr"), "Vegetables")
 ksd <- findset("ksd")
-kli <- findset("kli")
+kli <- c(findset("kli"), "livst_mutton", "livst_nes", "fish")
 
 ####get primary product demand of processed goods by aggregating processed
    #items to k then calculating the primary product requirement from them ##
@@ -68,7 +63,7 @@ cvn_fct <- time_interpolate(cvn_fct, interpolated_year = getYears(hrk), integrat
 food <- hrk[,,c(kli,intersect(kpr, getNames(hrk)))]
 food <- add_dimension(food, dim = 3.2, nm = "food")
 
-proc <- hrk[,,intersect(ksd, getNames(hrk))][,,"alcohol", inv = T]
+proc <- hrk[,,intersect(ksd, getNames(hrk))][,,"alcohol", invert = T]
 proc_oils <- collapseNames(proc[,,"oils"] /
                              cvn_fct[,,c("milling", "extracting")][,,"oils"]*
                              proc_shr[,,"oils"] )
@@ -104,10 +99,10 @@ consK <- mbind(food,
 if (level == "LEM"){
 
 magMapping <-  read.csv(system.file("extdata",mapping="mapMAgPIELEM.csv",
-                                      package = "MarkupsChen"))
+                                      package = "mrmarkup"))
 
 #remove sugar
-consK <- consK[,,"sugar", inv = T]
+consK <- consK[,,"sugar", invert = T]
 consWf <- toolAggregate(collapseNames(consK[,,"food"]), rel = magMapping, from = "k", to = "prod",
                         dim = 3.1, partrel = TRUE)
 consWp <- dimSums(consK[,,"processed"], dim = 3)

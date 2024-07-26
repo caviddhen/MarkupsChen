@@ -1,10 +1,12 @@
 #' @title FoodExpMagpieMarkup
 #' @description calculate markups
 #' @param level reg or regglo
-#' @param type "consumer" (marked up) or "producer" price output
+#' @param type "consumer" (marked up) or "producer" price output 
 #' @param gdx gdx file as input for mag base prices
-#' @param afterShock TRUE or FALSE for kcal consumed
+#' @param afterShock TRUE or FALSE for kcal consumed 
+#' @param povmodel TRUE outputs data in aggregated magclass format for poverty model
 #' @param prodAggr TRUE for aggregating across alll products
+#' @param validYi plot validation to Yi 2021
 #' @import dplyr tidyr
 #' @importFrom magclass as.data.frame
 #' @importFrom magpiesets findset
@@ -15,15 +17,16 @@
 #' @return dataframe or magclass object of consumer food expenditures
 #' @author David M Chen
 
-FoodExpMagpieMarkup <- function(gdx, level = "reg", type = "consumer", prodAggr = FALSE, afterShock = FALSE) {
+FoodExpMagpieMarkup <- function(gdx, level = "reg", type = "consumer", prodAggr = FALSE, afterShock = FALSE,povmodel = FALSE, validYi = FALSE) {
+#gdx <-  "/p/projects/magpie/users/davidch/magpie_versions/marketingMargins/magpie/output/Margins_SSP2-POL_2024-04-23_12.52.33/fulldata.gdx"
 
-
+# NOTE THIS ONE IS IN 2005 USDMER
 kfo <- findset("kfo")
 kBH <- read.csv(system.file("extdata",mapping="mapMAgPIELEM.csv",
-                              package = "MarkupsChen"))  %>%
+                              package = "mrmarkup"))  %>%
   rename("BHName" = prod)
 
-mapping <- readGDX(gdx = gdx, "i_to_iso")  %>%
+mapping <- readGDX(gdx = gdx, "i_to_iso")  %>% 
            rename("iso3c" = "iso")
 
 
@@ -32,7 +35,7 @@ wm <- attr   %>% magclass::as.data.frame(rev = 2)  %>%
   rename("k" = "products", "wm" = ".value")  %>%
   select(k, wm)
 
-nutr <- readGDX(gdx, "f15_nutrition_attributes")[,,"kcal"]  #mio kcal / t DM convert prices from kcal to dm
+nutr <- readGDX(gdx, "fm_nutrition_attributes")[,,"kcal"]  #mio kcal / t DM convert prices from kcal to dm
 
 prpr <- FoodDemandModuleConsumerPrices(gdx) # $/kcal
 prpr <- collapseNames((prpr / attr[,,"wm"][,,getItems(prpr, dim = 3)] * nutr[,getYears(prpr),getItems(prpr, dim = 3)] * 1e6)) # prpr in $/twmM
@@ -54,9 +57,9 @@ ksd <- findset("ksd")
 consKmag <- readFBSnew(level = "prim")
 
 cons <- Kcal(gdx = gdx, level = "iso",
-           calibrated = TRUE, after_shock = afterShock,
+           calibrated = TRUE, after_shock = afterShock, 
            products = "kfo", product_aggr = FALSE,
-           per_capita = FALSE) * 365  # This is in MILLION KCAL!
+           per_capita = FALSE) * 365  # This is in MILLION KCAL! 
 
 cons <- collapseNames(cons)
 kfo <- c(findset("kfo"), "Vegetables")
@@ -85,7 +88,7 @@ cvn_fct <- time_interpolate(cvn_fct, interpolated_year = getYears(prpr),
                             integrate_interpolated_years = T)[,getYears(prpr),]
 cvn_fct <- cvn_fct[,getYears(cons),]
 
-proc <- cons[,,intersect(ksd, getNames(cons, dim = 1))][,,"alcohol", inv = T]
+proc <- cons[,,intersect(ksd, getNames(cons, dim = 1))][,,"alcohol", invert = T]
 proc_oils <- collapseNames((proc[,,"oils"] /
                               dimSums(cvn_fct[,,c("milling", "extracting")][,,"oils"],dim=3.1) *
                               proc_shr[,,"oils"] ))
@@ -124,21 +127,26 @@ prpr<- prpr[,,kfo]
 
 prpr <- prpr %>%
   collapseNames() %>%
-    as.data.frame(rev = 2)  %>%
+    as.data.frame(rev = 2)  %>% 
   rename("iso3c" = "iso", "year" = t, "k" = kfo, "value" = ".value") %>%
-  inner_join(kBH)
+  inner_join(kBH) 
 
 ##### get markup regression coefs #####
+#coefs <- regressMarkups()
+prprOG <- prpr
+load("/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/brmRev1OutConsTighterHigherFilterpop1outliPopWSplit21Y7Fin.Rda")
 
 
-brmMarkupProdBF <-regressMarkups()
+brmMarkupProdBF <- brmRev1OutConsTighterHigherFilterpop1outliPopWSplit21Y7
 
-#remove alcohol
+#remove alcohol and fish
 prpr <- filter(prpr, k != "alcohol")
+prpr <- filter(prpr, k != "fish")
+
 
 #magCoefs <- kBH  %>%
-#  rename("prod" = "BHName")  %>%
-#    inner_join(coefs)
+#  rename("prod" = "BHName")  %>% 
+#    inner_join(coefs) 
 
 gdppc <- income(gdx, level = "iso")
 
@@ -147,57 +155,222 @@ gdppc <- gdppc %>%
   rename("iso3c" = "iso", "year" = "t_all", "gdppc" = ".value") %>%
   select(iso3c, year, gdppc)
 
-nutr <- as.data.frame(nutr, rev= 2)  %>%
+nutr <- as.data.frame(nutr, rev= 2)  %>% 
   rename("year" = "t_all", "k" = kall, "kcal" = ".value") %>%
   select(year,k, kcal)
 
-attr <- as.data.frame(attr, rev = 2)  %>%
+attr <- as.data.frame(attr, rev = 2)  %>% 
       rename( "k" = "products", "wm" = ".value") %>%
       select(k, wm)
 
+prpr <- prpr %>% rename("Ayear" = "year")  %>% 
+               mutate(year = 2017)
+#split to get only markups 
+gdppc <- gdppc %>% rename("Ayear" = "year")  
+#split to get only markups 
 
-#split for memory
-prpr1 <- prpr  %>% mutate(Cater = "Cater")   %>%
-                 inner_join(gdppc)  %>%
-                 mutate(lngdp = log(gdppc),
-                         loggdp = log(gdppc, base = 10))  %>%
-     select(iso3c, year, BHName, Cater, gdppc, lngdp, loggdp)  %>%
+
+prpr1 <- prpr  %>% mutate(Cater = "Cater")   %>% 
+                 inner_join(gdppc)  %>% 
+                 filter(Ayear <2010)  %>% 
+                 mutate(lngdp = log(gdppc), 
+                         loggdp = log(gdppc, base = 10))  %>% 
+     select(iso3c, Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
       distinct()
-
 fit1 <- fitted(brmMarkupProdBF, prpr1)
 prpr1 <- cbind(prpr1, fit1)
 
-prpr2 <- prpr  %>% mutate(Cater = "noCater")   %>%
-                 inner_join(gdppc)  %>%
-                 mutate(lngdp = log(gdppc),
-                         loggdp = log(gdppc, base = 10))  %>%
-     select(iso3c, year, BHName, Cater, gdppc, lngdp, loggdp)  %>%
+rm(fit1)
+gc()
+
+
+prpr11 <- prpr  %>% mutate(Cater = "Cater")   %>% 
+                 inner_join(gdppc)  %>% 
+                  filter(Ayear >2010)  %>%
+                  filter(Ayear < 2029)  %>%  
+                 mutate(lngdp = log(gdppc), 
+                         loggdp = log(gdppc, base = 10))  %>% 
+     select(iso3c, Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
       distinct()
-fit2 <- fitted(brmMarkupProdBF, prpr2)
-prpr2 <- cbind(prpr2, fit2)
+fit11 <- fitted(brmMarkupProdBF, prpr11)
+prpr11 <- cbind(prpr11, fit11)
+rm(fit11)
+gc()
 
-prpr_fits <- rbind(prpr1, prpr2)
+prpr3 <- prpr  %>% mutate(Cater = "Cater")   %>% 
+                 inner_join(gdppc)  %>% 
+                 filter(Ayear >2029)  %>% 
+                 filter(Ayear < 2049)  %>% 
+                 mutate(lngdp = log(gdppc), 
+                         loggdp = log(gdppc, base = 10))  %>% 
+     select(iso3c, Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+      distinct()
+fit3 <- fitted(brmMarkupProdBF, prpr3)
+prpr3 <- cbind(prpr3, fit3)
+rm(fit3)
+gc()
 
-prpr <- inner_join(prpr, prpr_fits)  %>%
+
+prpr31 <- prpr  %>% mutate(Cater = "Cater")   %>% 
+                 inner_join(gdppc)  %>% 
+                 filter(Ayear >2049)  %>% 
+                    filter(Ayear < 2074)  %>% 
+
+                 mutate(lngdp = log(gdppc), 
+                         loggdp = log(gdppc, base = 10))  %>% 
+     select(iso3c, Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+      distinct()
+fit31 <- fitted(brmMarkupProdBF, prpr31)
+prpr31 <- cbind(prpr31, fit31)
+rm(fit31)
+gc()
+
+prpr32 <- prpr  %>% mutate(Cater = "Cater")   %>% 
+                 inner_join(gdppc)  %>% 
+                    filter(Ayear > 2074)  %>% 
+
+                 mutate(lngdp = log(gdppc), 
+                         loggdp = log(gdppc, base = 10))  %>% 
+     select(iso3c, Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+      distinct()
+fit32 <- fitted(brmMarkupProdBF, prpr32)
+prpr32 <- cbind(prpr32, fit32)
+rm(fit32)
+gc()
+
+
+
+prpr4 <- prpr  %>% mutate(Cater = "noCater")   %>% 
+                 inner_join(gdppc)  %>% 
+                  filter(Ayear <2010)  %>% 
+                 mutate(lngdp = log(gdppc), 
+                         loggdp = log(gdppc, base = 10))  %>% 
+     select(iso3c, Ayear,year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+      distinct()
+fit4 <- fitted(brmMarkupProdBF, prpr4)  
+prpr4 <- cbind(prpr4, fit4) 
+rm(fit4)
+gc()
+
+
+prpr5 <- prpr  %>% mutate(Cater = "noCater")   %>% 
+                 inner_join(gdppc)  %>% 
+                  filter(Ayear >2010)  %>%
+                  filter(Ayear < 2029)  %>%  
+                 mutate(lngdp = log(gdppc), 
+                         loggdp = log(gdppc, base = 10))  %>% 
+     select(iso3c,Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+      distinct()
+fit5 <- fitted(brmMarkupProdBF, prpr5)  
+prpr5 <- cbind(prpr5, fit5) 
+gc()
+
+
+prpr6 <- prpr  %>% mutate(Cater = "noCater")   %>% 
+                 inner_join(gdppc)  %>% 
+                  filter(Ayear > 2029)  %>%  
+                filter(Ayear < 2049)  %>% 
+                 mutate(lngdp = log(gdppc), 
+                         loggdp = log(gdppc, base = 10))  %>% 
+     select(iso3c,Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+      distinct()
+fit6 <- fitted(brmMarkupProdBF, prpr6)  
+prpr6 <- cbind(prpr6, fit6) 
+rm(fit6)
+gc()
+
+
+prpr7 <- prpr  %>% mutate(Cater = "noCater")   %>% 
+                 inner_join(gdppc)  %>% 
+                  filter(Ayear > 2049)  %>%  
+                filter(Ayear < 2074)  %>% 
+                 mutate(lngdp = log(gdppc), 
+                         loggdp = log(gdppc, base = 10))  %>% 
+     select(iso3c,Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+      distinct()
+fit7 <- fitted(brmMarkupProdBF, prpr7)  
+prpr7 <- cbind(prpr7, fit7) 
+rm(fit7)
+gc()
+
+prpr8 <- prpr  %>% mutate(Cater = "noCater")   %>% 
+                 inner_join(gdppc)  %>% 
+                filter(Ayear > 2074)  %>% 
+                 mutate(lngdp = log(gdppc), 
+                         loggdp = log(gdppc, base = 10))  %>% 
+     select(iso3c,Ayear, year, BHName, Cater, gdppc, lngdp, loggdp)  %>% 
+      distinct()
+fit8 <- fitted(brmMarkupProdBF, prpr8)  
+prpr8 <- cbind(prpr8, fit8) 
+rm(fit8)
+gc()
+
+
+
+
+
+prpr_fits <- rbind(prpr1, prpr11, prpr3, prpr31, prpr32,  prpr4, prpr5, prpr6, prpr7, prpr8)
+#save(prpr_fits, file = "/p/projects/magpie/users/davidch/ICPdata_cluster/Rev1/prpr_fits.Rda") #POL
+
+prpr <- prpr  %>% select(!year)  %>% 
+      rename("year" = "Ayear")
+
+      
+prpr_fits <- prpr_fits  %>% select(!year)  %>% 
+      rename("year" = "Ayear")
+
+
+prprO <- inner_join(prpr, prpr_fits)  %>% 
                GDPuc::convertGDP(unit_in = "constant 2005 US$MER",
                    unit_out = "constant 2017 US$MER",
-                   replace_NAs = "no_conversion")  %>%
-        rename("prodPrice" = value)
+                   replace_NAs = "no_conversion")  %>% 
+        rename("prodPrice" = value) 
 
-markupPr <- prpr  %>%
-                   mutate(consPrice = prodPrice + Estimate)  %>%
-   select(iso3c, year, k, prodPrice, BHName,  Cater, gdppc, prodPrice, consPrice)  %>%
-             pivot_wider(names_from = Cater, values_from = consPrice)    %>%
-  rename( "caterPrice" = Cater, "noCaterPrice" = noCater)
+markupPr <- prprO  %>% 
+                   mutate(consPrice = prodPrice + Estimate,
+                          consPrice2 = prodPrice + Q2.5,
+                          consPrice9 = prodPrice + Q97.5 )  %>% 
+   select(iso3c, year, k, prodPrice, BHName,  Cater, gdppc, prodPrice, consPrice, consPrice9, consPrice2)  %>% 
+             pivot_wider(names_from = Cater, values_from = c(consPrice, consPrice2, consPrice9))    %>% 
+  rename( "caterPrice_Est" = consPrice_Cater, "noCaterPrice_Est" = consPrice_noCater, 
+         "caterPrice_q25" = consPrice2_Cater, "noCaterPrice_q25" = consPrice2_noCater, 
+         "caterPrice_q95" = consPrice9_Cater, "noCaterPrice_q95" = consPrice9_noCater)  
+
+
+
+# markupPr <- inner_join(prpr, gdppc)  %>%
+#  inner_join(magCoefs)  %>%
+#  inner_join(nutr)  %>% 
+#  inner_join(attr)  %>%
+#  rename("prodPrice" = value)  %>% 
+#mutate(markupCater = a*(b^log(gdppc, base = 10)),
+#       markupCater = markupCater * wm / kcal / 1e6) %>% #get to tdm, to $/kcal from  miokcal/tdm 
+#rename("value" = "markupCater")  %>% 
+#  GDPuc::convertGDP(unit_in = "constant 2017 US$MER",
+#                   unit_out = "constant 2005 US$MER",
+#                   replace_NAs = "no_conversion")  %>% 
+#       rename("markupCater" = value)  %>% 
+#mutate(CaterPrice = prodPrice + markupCater)  %>% 
+#select(!c(a, b, markupCater))  %>% 
+#pivot_wider(names_from = cater, values_from = CaterPrice) %>% 
+#  rename( "caterPrice" = cater, "noCaterPrice" = noCater)
 
 markups <-  markupPr %>%
-  pivot_longer(cols = c(prodPrice, noCaterPrice, caterPrice),
-               names_to = "Price Type", values_to = "Price") %>%
-  select(iso3c, year, k,  `Price Type`, Price)
+  mutate("prodPrice_Est" = prodPrice,
+         "prodPrice_q25" = prodPrice,
+        "prodPrice_q95" = prodPrice)  %>% 
+  pivot_longer(cols = c(prodPrice_Est, prodPrice_q25, prodPrice_q95, 
+                        caterPrice_Est, noCaterPrice_Est, 
+         caterPrice_q25, noCaterPrice_q25,  
+         caterPrice_q95,  noCaterPrice_q95),
+               names_to = "PriceType_Uncertainty", values_to = "Price") %>%
+  separate(PriceType_Uncertainty, into = c("Price Type", "Uncertainty"))  %>% 
+  select(iso3c, year, k,  `Price Type`, Uncertainty, Price) 
 
+## plotting scripts started here
 
 cons <- cons[,,kfo] %>% #from FoodExpMagpieMarkup
-  as.data.frame(rev=2)  %>%
+  as.data.frame(rev=2)  %>% 
   rename("foodD" = ".value", "iso3c" = "iso",
          "k" = "kfo", "year" = "t")
 
@@ -214,16 +387,17 @@ magExp <- inner_join(cons,
          farmAHexp = foodD *(1-AFHshr) * prodPrice,
          farmAFHexp = foodD *AFHshr * prodPrice,
          farmAHshr = farmAHexp/fahExp,
-         farmAFHshr = farmAFHexp/fafhExp)%>%
+        farmAFHshr = farmAFHexp/fafhExp)%>% 
     mutate(across(c(ends_with("Exp")),  ~ . / !!1e9 ),
          totalFoodExp = fahExp + fafhExp)  %>%  # get total food exp in billions
-  select(iso3c, year, k, foodD, gdp, prodPrice, caterPrice, noCaterPrice, fahExp, fafhExp, totalFoodExp, farmAHexp, farmAFHexp, farmAHshr, farmAFHshr)
+  select(iso3c, year, k, foodD, gdp, prodPrice, caterPrice, noCaterPrice, Uncertainty,
+                  fahExp, fafhExp, totalFoodExp, farmAHexp, farmAFHexp, farmAHshr, farmAFHshr)
 
 magExp[is.na(magExp)] <- 0
 
 if(prodAggr) {
-magExp<- magExp %>%
-  group_by(iso3c, year) %>%
+magExpAgg<- magExp %>%
+  group_by(iso3c, year, Uncertainty) %>%
   summarise(fahExp = sum(fahExp),
             fafhExp = sum(fafhExp),
             farmAHexp = sum(farmAHexp),
@@ -235,9 +409,111 @@ magExp<- magExp %>%
          farmShrTot = totfarmExp/totExp)
 }
 
+
+
+if(validYi){
+
+yi4 <- read_xlsx(system.file("extdata",mapping="YiSourceFig4.xlsx",
+                                    package = "mrmarkup"), skip = 1) %>%
+  pivot_longer(cols = c(2:last_col()), names_to = "year", values_to = "YifarmAHshr") %>%
+  mutate(year = as.numeric(year)) %>%
+  filter(!is.na(year)) %>%
+  group_by(Country, year) %>%
+  summarise(YifarmAHshr = mean(YifarmAHshr, na.rm =T)) %>%
+  ungroup()
+yi4$iso3c <- toolCountry2isocode(yi4$Country, mapping = c("Korea, Rep." = "KOR"))
+
+compyi4 <-  select(magExpAgg, iso3c, year,farmAHshr) %>%
+  inner_join( select(yi4, iso3c, year, YifarmAHshr)) %>%
+  pivot_longer(cols = c(farmAHshr, YifarmAHshr),
+               names_to = "source", values_to = "farmAHShr")
+
+ggplot(filter(compyi4),
+       aes(x = year, y = farmAHShr, colour = source)) +
+  geom_line()+
+  facet_wrap(~iso3c) +
+  #  ylim(c(0.15, 0.45)) +
+  theme_bw(base_size = 20) +
+  ggtitle("Farm Share of At Home Food Expenditures \n based on MAgPIE prices")
+
+
+yi3 <- read_xlsx(system.file("extdata",mapping="YiSourceFig3.xlsx",
+                                    package = "mrmarkup"), skip = 4) %>%
+  rename("year" = Year, "USDAfarmShrTot" = `Farm value share of expenditures`,
+         "YifarmShrTot" = `New farm share series`,
+  ) %>%
+  select(year, USDAfarmShrTot, YifarmShrTot) %>%
+  filter(!is.na(YifarmShrTot))
+yi3$USDAfarmShrTot[is.na(yi3$USDAfarmShrTot)]  <- 0
+
+yi3 <- yi3 %>%
+  mutate(year = as.numeric(year),
+         USDAfarmShrTot = as.numeric(USDAfarmShrTot),
+         YifarmShrTot = YifarmShrTot/100,
+         USDAfarmShrTot = USDAfarmShrTot/100)
+
+yi3[which(yi3$USDAfarmShrTot==0),"USDAfarmShrTot"] <- NA
+
+
+mkYi3 <- filter(magExpAgg, iso3c == "USA") %>%
+  select(iso3c, year, Uncertainty, farmShrTot)  %>% 
+  as.magpie(spatial = 1, temporal = 2, tidy = TRUE) %>%
+  time_interpolate(interpolated_year = c(1990:2020), integrate_interpolated_years = TRUE) %>%
+  as.data.frame(rev = 2) %>% 
+  pivot_wider(names_from = "Uncertainty", values_from = ".value")
+
+compyi3 <- mkYi3 %>%
+  right_join(yi3) %>%
+  pivot_longer(cols = c(farmShrTot, USDAfarmShrTot, YifarmShrTot),
+               names_to = "source", values_to = "farmShr")
+
+ggplot(compyi3, aes(x = year, y = farmShr, colour = source)) +
+  geom_line() +
+  #ylim(c(0.10, 0.30)) +
+  theme_bw(base_size = 20) +
+  ggtitle("Farm share of US food expenditures  \n based on MAgPIE prices")
+
+} 
+
 out <- magExp
 
+if(povmodel) {
+pop <- population(gdx, level = "iso")
 
-return(out)
+  if (type == "producer") {
+    exp <- "totfarmExp"
+  } else if (type == "consumer") {
+    exp <- "totExp"
+  }
+mag <- as.magpie(magExp[,c("iso3c", "year", exp)], tidy = TRUE)
+
+if(level == "reg") {
+mag <- toolAggregate(mag, rel = mapping,  from = "iso3c", to = "i",
+                      dim = 1)
+pop <- toolAggregate(pop, rel = mapping,  from = "iso3c", to = "i",
+                      dim = 1)
+out <- mag/pop*1e3 # in billion dollars/million ppl to dollar/capita
+
+} else if (level == "regglo") {
+mag <- toolAggregate(mag, rel = mapping,  from = "iso3c", to = "i",
+                      dim = 1)
+pop <- toolAggregate(pop, rel = mapping,  from = "iso3c", to = "i",
+                      dim = 1)
+ glom <- dimSums(mag, dim = 1)
+ glop <- dimSums(pop, dim = 1)
+ getItems(glom, dim = 1) <- "GLO"
+ getItems(glop, dim = 1) <- "GLO"
+ mag <- mbind(mag, glom)
+ pop <- mbind(pop, glop)
+ out <- mag/pop*1e3 # in billion dollars/million ppl to dollar/capita
+
+} else if (level == "iso"){
+out <- mag/pop*1e3 # in billion dollars/million ppl to dollar/capita
+
+}
+getNames(out) <- NULL
 }
 
+return(out)
+
+}

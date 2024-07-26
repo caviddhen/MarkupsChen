@@ -11,7 +11,8 @@ readICPexchangeRates <- function() {
 
 #LCU/pppEX = ppp
 
-ppp <-  readSource("ICP2017raw", subtype = "PPP")
+ppp <-  read_xlsb(system.file("extdata",mapping="ICP-Researcher-Data_Global_2017_Chen_0810-2022.xlsb",
+                              package = "mrmarkup"), sheet = "PPP", skip = 3)
 
 colnames(ppp)[1:6] <- ppp[1, c(1:6)]
 

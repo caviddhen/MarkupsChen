@@ -11,8 +11,8 @@
 calcFAOExpenditures <- function() {
 
   magMapping <-  read.csv(system.file("extdata",mapping="mapMAgPIELEM.csv",
-                                      package = "MarkupsChen"))
-
+                                      package = "mrmarkup"))
+ 
   consK <- readFBSnew()
   prprk <- readFAOPrices(fill = T)
 
@@ -20,11 +20,11 @@ citems <- intersect(getNames(consK, dim =1), getNames(prprk, dim = 1))
 expK <- consK[,,citems] * prprk[getRegions(consK), getYears(consK), citems]
 
 #remove sugar since it's actually a processed item
-expK <- expK[,,"sugar", inv = T]
+expK <- expK[,,"sugar", invert = T]
 
 expLECagg <- toolAggregate(collapseNames(expK[,,"food"]), rel = magMapping, from = "k", to = "prod",
                            partrel = TRUE, dim = 3)
-expLECagg_proc <- dimSums(expK[,,"processed"][,,"cottn_pro", inv = T], dim = 3)
+expLECagg_proc <- dimSums(expK[,,"processed"][,,"cottn_pro", invert = T], dim = 3)
 expLECagg_proc <- add_dimension(expLECagg_proc, dim = 3.1, nm = "Processed")
 
 expLECagg <- mbind(expLECagg, expLECagg_proc)

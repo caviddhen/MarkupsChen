@@ -2,8 +2,9 @@
 #' @description read gets FAO food expenditures
 #' @param fillPrices true tries to fill prices with 5 year average around the missing value
 #' @param level k or prim
-#' @import tidyr dplyr mrcommons madrat
+#' @import tidyr dplyr mrcommons
 #' @importFrom magpiesets findset
+#' @import madrat
 #' @export
 #'
 #' @return dataframe of FAO expenditures
@@ -11,19 +12,47 @@
 
 readFAOPrices <- function(fillPrices = T, level = "k") {
 
-FAOmap <-  read.csv(system.file("extdata",mapping="FAOitems_online.csv",
-                            package = "MarkupsChen"))
 
+FAOmap <-  read.csv(system.file("extdata",mapping="newFAOitems_online_DRAFT.csv",
+                                      package = "mrmarkup"))
 
 prpr <- readSource("FAO_online", "PricesProducerAnnual",
                    convert = TRUE)
 
+# use live weights for livestock products
+
+liveW <- read.csv(system.file("extdata",mapping="liveWeight.csv",
+                               package = "mrmarkup"))
+liveW <- setNames(liveW$live, liveW$dead)
+ 
+liveWRatio <- NULL
+for ( i in seq_along(liveW)) {
+ 
+ tmp <- prpr[,,liveW[i]] / prpr[, , names(liveW[i])]
+ liveWRatio <- mbind(liveWRatio, tmp)
+ }
+liveWRatio[is.infinite(liveWRatio)] <- NA
+avg <- collapseNames(magpply(liveWRatio, mean, DIM = c(2),  na.rm = TRUE), collapsedim = 2)
+
+for ( i in seq_along(liveW)) {
+
+prpr[,,liveW[i]] <- ifelse(prpr[,,liveW[i]] == 0,
+                         collapseNames(prpr[,,names(liveW)[i]]*avg[,,liveW[i]], collapsedim = 2),
+                         prpr[,,liveW[i]] )
+}
+
+
 #convert from 2005 constant US$ to 2017 US$ MER based on Consumer PRice INdex
 prpr <- prpr * 1.23  # convert with CPI
+
 
 #production weight from ProductionItem to FoodBalance Item
 crop <- collapseNames(readSource("FAO_online", "Crop", convert = TRUE)[,,"production"])
 live <- collapseNames(readSource("FAO_online", "LivePrim", convert = TRUE)[,,"production"])
+tmp <- setNames(live[,,names(liveW)], liveW)
+live <- mbind(live, tmp)
+live <- live[, , names(liveW), invert = TRUE]
+
 weight <- mbind(crop, live)
 
 #make sure matching years and items
@@ -31,8 +60,8 @@ citems <- intersect(getNames(prpr), getNames(weight))
 cyears <- intersect(getYears(prpr), getYears(weight))
 cregions <- intersect(getRegions(prpr), getRegions(weight))
 
-weight <- weight[cregions,cyears, citems][,,"1166|Meat nes", inv = TRUE]
-prpr <- prpr[cregions,cyears,citems][,,"1166|Meat nes", inv = TRUE]
+weight <- weight[cregions,cyears, citems][,,"1166|Meat nes", invert = TRUE]
+prpr <- prpr[cregions,cyears,citems][,,"1166|Meat nes", invert = TRUE]
 
 FAOmap1 <- FAOmap[which(FAOmap$ProductionItem %in% getNames(weight)),]
 prpr_fbs <- toolAggregate(prpr, rel = FAOmap1, weight = weight,
@@ -40,12 +69,11 @@ prpr_fbs <- toolAggregate(prpr, rel = FAOmap1, weight = weight,
                           dim = 3.1, wdim = 3.1 )
 
 #map to magpie
-kmapping <- read.csv(system.file("extdata",mapping="newFAOitems_online_DRAFT.csv",
-                     package = "MarkupsChen"))
+kmapping <-  read.csv(system.file("extdata",mapping="newFAOitems_online_DRAFT.csv",
+                               package = "mrmarkup"))
 
 #consumption weight from FoodBalanceItem to Large Exp Grouping, but some values dropped, oilpalm gets dropped
 hr <- calcOutput("FAOharmonized", aggregate = FALSE)
-#load("C:/PIK/ICPdata/hr.Rda")
 
 hr <- dimSums(hr[,,c("food", "processed")], dim = 3.2, na.rm = T)
 
@@ -55,9 +83,9 @@ pryears <-  intersect(getYears(prpr_fbs), getYears(hr))
 rm <- c(setdiff(citems, kmapping[which(kmapping$FoodBalanceItem %in% citems),"FoodBalanceItem"]),
         "2633|Cocoa Beans and products",  "2630|Coffee and products", "2635|Tea (including mate)")
 
-prprk<- toolAggregate(prpr_fbs[,,citems][,,rm, inv = T],  rel = kmapping,
+prprk<- toolAggregate(prpr_fbs[,,citems][,,rm, invert = T],  rel = kmapping,
                       from = "FoodBalanceItem", to = "k_ICP",
-                      weight = setYears(hr[,2013,citems][,,rm, inv = T],NULL), dim = 3, wdim = 3,  #weight is 2013 consumption as FAOharmonized doesn't have all years
+                      weight = setYears(hr[,2013,citems][,,rm, invert = T],NULL), dim = 3, wdim = 3,  #weight is 2013 consumption as FAOharmonized doesn't have all years
                       partrel = TRUE )
 
 if (fillPrices) {
@@ -130,7 +158,7 @@ if (level == "prim"){
   fillpast[,,"oils"]  <- setYears(procMag[,min(getYears(procMag, as.integer = T)),"oils"],NULL)
   procMag <- mbind(fillpast, procMag)
 
-  FAOpmag <- FAOp[getRegions(prpr_oils),, ][,,"sugar", inv =T]
+  FAOpmag <- FAOp[getRegions(prpr_oils),, ][,,"sugar", invert =T]
   FAOp <- mbind(FAOpmag, procMag)
 
 }
